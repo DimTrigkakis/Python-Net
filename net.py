@@ -1,10 +1,12 @@
 import numpy as np
 from matplotlib import pyplot as plt
 import random
+import math
 
 ##### Parameters
-N1,N2 = 2,1
+N1,N2 = 2,10
 randomWeightsRange = 1
+C = 10 
 alpha = 0.1
 #####
 
@@ -16,6 +18,20 @@ def gfunction(x):
 def gMfunction(X):
 	fvectorized = np.vectorize(gfunction,otypes=[np.float])
 	return fvectorized(X)
+
+
+def gSoftmaxfunction(x,Sum):
+
+	return (math.exp(x)/Sum)
+
+def gMSoftmaxfunction(X):
+
+	expVectorized = np.vectorize(math.exp,otypes=[np.float])
+	expX = expVectorized(X)
+	Sum = np.sum(expX)
+
+	fvectorized = np.vectorize(gSoftmaxfunction,otypes=[np.float])
+	return fvectorized(X,Sum)
 
 def innerInitializeWeights(W):
 	
@@ -31,13 +47,31 @@ def initializeWeights(W):
 
 	return
 
-def batchUpdate(myImages,Activations,Weights,alpha):
+# target activation is a class from 1 to C
+def crossEntropyLoss(finalActivations,targetActivation):
+	
+	oneHot = []
+	for i in range(1,C+1):
+		if (targetActivation == i):
+			oneHot.append(1)
+		else:
+			oneHot.append(0)
+	
+	loss = -math.log(np.dot(oneHot,finalActivations))
+	
+	return loss
 
+def batchUpdate(myImages,myLabels,Activations,Weights,alpha):
+
+	Loss = 0
 	for i in range(len(myImages)):
-		# Calculate error
-		E += 1
+		# Calculate the loss
+		Loss += crossEntropyLoss(Activations[2],myLabels[i])
 
-	# Backpropagate error to calculate deltas in each layer
+	
+	# Backpropagate loss to calculate deltas in each layer
+	
+
 	# Calculate weight updates
 	# Update weights based on alpha
 	
@@ -67,15 +101,13 @@ def showWeight(W):
 #####
 def activateNetwork(input,W):
 	
-	print "In network"
-	print input.shape,W[0].shape
 	Act1 = gMfunction(np.dot(input,W[0]))
 	
 	##### adding the bias term to the activation
 	Act1 = np.append(Act1,gfunction(1))
-	print Act1.shape,W[1].shape
-	Act2 = gMfunction(np.dot(Act1,W[1]))
 
+	Act2 = np.dot(Act1,W[1])
+	Act2 = gMSoftmaxfunction(Act2)
 	return input,Act1,Act2
 #####
 
@@ -112,10 +144,13 @@ print Activations[2]
 ##### Backpropagation
 batchSize = 1
 
+myImages = []
+myLabels = []
 for i in range(batchSize):
 	myImages.append(myImage)
+	myLabels.append(random.randint(1,10))
 
-batchUpdate(myImages,Activations,Weights,alpha)
+batchUpdate(myImages,myLabels,Activations,Weights,alpha)
 
 		
 
