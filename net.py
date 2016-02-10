@@ -4,21 +4,31 @@ import random
 import math
 
 ##### Parameters
-N1,N2 = 2,10
+C = 2
+N1,N2 = 3,C
 randomWeightsRange = 1
-C = 10 
 alpha = 0.1
 #####
 
+## Setting the random seed for testing purposes
+random.seed(6) ## This lets 2/3 neurons in the hidden layer have non-zero values after relu activation
+
+## Debugging print functionality
+
+myDebug = True
+def show(*T):
+	if (myDebug):
+		for o in list(T):
+			print o,
+		print
+
 ## Neural Network functions
 def gfunction(x):
-
 	return x if x > 0 else 0
 
 def gMfunction(X):
 	fvectorized = np.vectorize(gfunction,otypes=[np.float])
 	return fvectorized(X)
-
 
 def gSoftmaxfunction(x,Sum):
 
@@ -56,25 +66,74 @@ def crossEntropyLoss(finalActivations,targetActivation):
 			oneHot.append(1)
 		else:
 			oneHot.append(0)
-	
+
 	loss = -math.log(np.dot(oneHot,finalActivations))
 	
-	return loss
+	return loss,oneHot
 
 def batchUpdate(myImages,myLabels,Activations,Weights,alpha):
 
-	Loss = 0
 	for i in range(len(myImages)):
 		# Calculate the loss
-		Loss += crossEntropyLoss(Activations[2],myLabels[i])
 
-	
-	# Backpropagate loss to calculate deltas in each layer
-	
+		Loss,oneHot = crossEntropyLoss(Activations[2],myLabels[i])
 
-	# Calculate weight updates
-	# Update weights based on alpha
-	
+		E = []
+
+
+		a0Shape = int(Activations[0].shape[0])
+		activations0 = np.reshape(Activations[0],(a0Shape, 1))
+
+		a1Shape = int(Activations[1].shape[0])
+		activations1 = np.reshape(Activations[1],(a1Shape, 1))
+
+		a2Shape = int(Activations[2].shape[0])
+		activations2 = np.reshape(Activations[2],(a2Shape, 1))
+
+		for j in range(len(Activations[2])):
+			if (oneHot[j] == 1):
+				E.append(-math.log(Activations[2][j]))
+			else:
+				E.append(-math.log(1-Activations[2][j]))
+
+		outputDeltas = []
+
+		for j in range(len(Activations[2])):
+			print(oneHot[j],Activations[2][j])
+			outputDeltas.append(oneHot[j] - Activations[2][j])
+
+		print outputDeltas
+		outputDeltas = np.reshape(np.asarray(outputDeltas),(len(outputDeltas),1))
+		print outputDeltas.shape
+
+
+		WeightUpdatesHidden = np.copy(Weights[1]) # second set of weights
+		size = WeightUpdatesHidden.shape
+
+		for xx in range(size[0]):
+			for yy in range(size[1]):
+				WeightUpdatesHidden = activations1.dot(outputDeltas.transpose())
+
+
+		# define the hidden deltas
+
+		WeightUpdatesInput = np.copy(Weights[0]) # second set of weights
+		size = WeightUpdatesInput.shape
+
+		for xx in range(size[0]):
+			for yy in range(size[1]):
+				WeightUpdatesInput = activations0.dot(hiddenDeltas.transpose())
+
+
+
+		# We have the initial errors for our last layer in E
+
+		# Let's try to compute the deltas for the last layer
+
+		# We backpropagate, to calculate deltas in each layer
+		# We calculate weight updates, and save them
+
+	# We now update the weights based on accumulated updates
 	
 	return
 
@@ -111,7 +170,7 @@ def activateNetwork(input,W):
 	return input,Act1,Act2
 #####
 
-print("A neural net implementation for the Deep Learning class by Fuxin Lee, by Dimitris Trigkakis")
+print("A neural net implementation for the Deep Learning class by Fuxin Lee, by Viktor Milleghere (D.T.)")
 
 h, w = 2, 2
 myImage = np.empty([h, w, 3], dtype = np.float64)
@@ -121,8 +180,8 @@ for i in range(0,h):
 		r,g,b = [random.uniform(0,1),random.uniform(0,1),random.uniform(0,1)]
 		myImage[i,j] = r,g,b
 
-plt.imshow(myImage, interpolation='nearest')
-plt.show()
+# plt.imshow(myImage, interpolation='nearest')
+# plt.show()
 
 ##### Network initialization
 # ----weights include the bias weights
@@ -137,9 +196,10 @@ myImageFlattened = np.append(myImageFlattened,(1))
 
 Activations = activateNetwork(myImageFlattened,Weights)
 
-print Activations[0]
-print Activations[1]
-print Activations[2]
+show("Network Activations ---v")
+show("Activations[0] ---v\n",Activations[0])
+show("Activations[1] ---v\n",Activations[1])
+show("Activations[2] ---v\n",Activations[2])
 
 ##### Backpropagation
 batchSize = 1
@@ -148,12 +208,6 @@ myImages = []
 myLabels = []
 for i in range(batchSize):
 	myImages.append(myImage)
-	myLabels.append(random.randint(1,10))
+	myLabels.append(random.randint(1,C))
 
 batchUpdate(myImages,myLabels,Activations,Weights,alpha)
-
-		
-
-
-
-
