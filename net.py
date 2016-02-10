@@ -30,6 +30,14 @@ def gMfunction(X):
 	fvectorized = np.vectorize(gfunction,otypes=[np.float])
 	return fvectorized(X)
 
+
+def ggradfunction(x):
+	return 1 if x > 0 else 0
+
+def ggradMfunction(X):
+	fvectorized = np.vectorize(ggradfunction,otypes=[np.float])
+	return fvectorized(X)
+
 def gSoftmaxfunction(x,Sum):
 
 	return (math.exp(x)/Sum)
@@ -73,6 +81,9 @@ def crossEntropyLoss(finalActivations,targetActivation):
 
 def batchUpdate(myImages,myLabels,Activations,Weights,alpha):
 
+	W0 = []
+	W1 = []
+	finalWeights = [W0, W1]
 	for i in range(len(myImages)):
 		# Calculate the loss
 
@@ -102,40 +113,56 @@ def batchUpdate(myImages,myLabels,Activations,Weights,alpha):
 			print(oneHot[j],Activations[2][j])
 			outputDeltas.append(oneHot[j] - Activations[2][j])
 
-		print outputDeltas
 		outputDeltas = np.reshape(np.asarray(outputDeltas),(len(outputDeltas),1))
-		print outputDeltas.shape
-
 
 		WeightUpdatesHidden = np.copy(Weights[1]) # second set of weights
 		size = WeightUpdatesHidden.shape
 
-		for xx in range(size[0]):
-			for yy in range(size[1]):
-				WeightUpdatesHidden = activations1.dot(outputDeltas.transpose())
+		WeightUpdatesHidden = activations1.dot(outputDeltas.transpose())
 
-
+		# weightupdateshidden is deltas multiplied by the weights, just multiply with gradients and activations now
 		# define the hidden deltas
 
 		WeightUpdatesInput = np.copy(Weights[0]) # second set of weights
 		size = WeightUpdatesInput.shape
 
-		for xx in range(size[0]):
-			for yy in range(size[1]):
-				WeightUpdatesInput = activations0.dot(hiddenDeltas.transpose())
 
+		WeightUpdatesTemp = Weights[1].dot(outputDeltas)
+		WeightUpdatesTemp = np.delete(WeightUpdatesTemp,3,0) # hardcoded 3 !!!! ALERT
+		
+		
+		derivatives = ggradMfunction(activations1)
+		derivatives = np.delete(derivatives,3,0)
 
+		temp = np.multiply(WeightUpdatesTemp,derivatives)
 
-		# We have the initial errors for our last layer in E
+		WeightUpdatesInput = activations0.dot(temp.transpose())
+		
+		print temp
+		# remove last bias term from outputDeltas
 
-		# Let's try to compute the deltas for the last layer
+		
+		if (i == 0):
+			# zeros for this 
+			finalWeights[0] = np.zeros(Weights[0].shape)
+			finalWeights[0] = np.add(finalWeights[0],WeightUpdatesInput)
+			finalWeights[1] = np.zeros(Weights[1].shape)
+			finalWeights[1] = np.add(finalWeights[1],WeightUpdatesHidden)
+		else:
+			finalWeights[0] = np.add(WeightUpdatesInput,finalWeights[0])
+			finalWeights[1] = np.add(WeightUpdatesHidden,finalWeights[1])
 
-		# We backpropagate, to calculate deltas in each layer
-		# We calculate weight updates, and save them
+		print "Initial Weights",Weights
+		print "my updated weights",finalWeights
 
-	# We now update the weights based on accumulated updates
+		m = -0.99
+
+		updatedWeight = np.subtract(Weights,np.multiply(finalWeights,m))
 	
-	return
+		print updatedWeight
+
+
+	return updatedWeight
 
 #####
 def showWeight(W):
@@ -210,4 +237,11 @@ for i in range(batchSize):
 	myImages.append(myImage)
 	myLabels.append(random.randint(1,C))
 
-batchUpdate(myImages,myLabels,Activations,Weights,alpha)
+newWeights = batchUpdate(myImages,myLabels,Activations,Weights,alpha)
+Activations = activateNetwork(myImageFlattened,newWeights)
+
+
+show("Network Activations ---v")
+show("Activations[0] ---v\n",Activations[0])
+show("Activations[1] ---v\n",Activations[1])
+show("Activations[2] ---v\n",Activations[2])
